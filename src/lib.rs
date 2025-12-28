@@ -48,32 +48,36 @@ impl Runtime {
         Self { workers, sender }
     }
 
-    fn execute<F>(&self, f: F)
+    fn send(&self, message: Message) {
+        self.sender.send(message).unwrap();
+    }
+
+    fn send_job<F>(&self, job: F)
     where
         F: FnOnce() + Send + 'static,
     {
-        let job = Box::new(f);
-        self.sender.send(Message::NewJob(job)).unwrap();
+        let message = Message::NewJob(Box::new(job));
+        self.send(message);
+    }
+
+    fn send_shutdown(&self) {
+        self.send(Message::Terminate);
     }
 
     /// Create a SimplePool from this runtime.
-    pub fn simple_pool(&self) -> SimplePool {
-        SimplePool {
-            sender: self.sender.clone(),
-        }
+    pub fn simple_pool(&self) -> SimplePool<'_> {
+        SimplePool { runtime: &self }
     }
 
     /// Create a MapPool from this runtime.
-    pub fn map_pool(&self) -> MapPool {
-        MapPool {
-            sender: self.sender.clone(),
-        }
+    pub fn map_pool(&self) -> MapPool<'_> {
+        MapPool { runtime: &self }
     }
 
     /// Shutdown the runtime and wait for all threads to finish.
     pub fn shutdown(self) {
         for _ in &self.workers {
-            self.sender.send(Message::Terminate).unwrap();
+            self.send_shutdown();
         }
 
         for worker in self.workers {
@@ -83,27 +87,26 @@ impl Runtime {
 }
 
 /// A simple fire-and-forget thread pool.
-pub struct SimplePool {
-    sender: mpsc::Sender<Message>,
+pub struct SimplePool<'a> {
+    runtime: &'a Runtime,
 }
 
-impl SimplePool {
+impl<'a> SimplePool<'a> {
     /// Submit a job to be executed.
     pub fn submit<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
     {
-        let job = Box::new(f);
-        self.sender.send(Message::NewJob(job)).unwrap();
+        self.runtime.send_job(f);
     }
 }
 
 /// A thread pool for mapping functions over input lists.
-pub struct MapPool {
-    sender: mpsc::Sender<Message>,
+pub struct MapPool<'a> {
+    runtime: &'a Runtime,
 }
 
-impl MapPool {
+impl<'a> MapPool<'a> {
     /// Map a function over a list of inputs, returning results in order.
     pub fn map<T, R, F>(&self, inputs: Vec<T>, f: F) -> Vec<R>
     where
@@ -111,21 +114,25 @@ impl MapPool {
         R: Send + 'static,
         F: Fn(T) -> R + Send + Sync + 'static,
     {
-        let f = Arc::new(f);
         let (tx, rx) = mpsc::channel();
         let len = inputs.len();
 
+        let f = Arc::new(f);
         for (i, input) in inputs.into_iter().enumerate() {
             let f = Arc::clone(&f);
+
             let tx = tx.clone();
             let job = Box::new(move || {
                 let result = f(input);
                 tx.send((i, result)).unwrap();
             });
-            self.sender.send(Message::NewJob(job)).unwrap();
+
+            self.runtime.send_job(job);
         }
 
-        let mut results = vec![None; len];
+        let mut results = Vec::with_capacity(len);
+        unsafe { results.set_len(len) };
+
         for _ in 0..len {
             let (i, result) = rx.recv().unwrap();
             results[i] = Some(result);
