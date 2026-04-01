@@ -1,10 +1,12 @@
+pub mod map;
+pub mod sequential;
+pub mod simple;
+
 use crate::map::MapPool;
+use crate::sequential::SeqPool;
 use crate::simple::SimplePool;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::{self, JoinHandle};
-
-pub mod map;
-pub mod simple;
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -69,14 +71,19 @@ impl Runtime {
         self.send(Message::Terminate);
     }
 
-    /// Create a SimplePool from this runtime.
+    /// Create a `SimplePool` from this runtime.
     pub fn simple_pool(&self) -> SimplePool<'_> {
         SimplePool::new(&self)
     }
 
-    /// Create a MapPool from this runtime.
+    /// Create a `MapPool` from this runtime.
     pub fn map_pool(&self) -> MapPool<'_> {
         MapPool::new(&self)
+    }
+
+    /// Create a `SeqPool` from this runtime.
+    pub fn seq_pool(&self) -> SeqPool {
+        SeqPool::new()
     }
 
     /// Shutdown the runtime and wait for all threads to finish.

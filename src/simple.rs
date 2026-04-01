@@ -7,7 +7,7 @@ pub struct SimplePool<'a> {
 
 impl<'a> SimplePool<'a> {
     /// Creates a new `SimplePool` from a `Runtime`.
-    pub fn new(runtime: &'a Runtime) -> Self {
+    pub(crate) fn new(runtime: &'a Runtime) -> Self {
         Self { runtime }
     }
 
