@@ -22,30 +22,30 @@ impl<'a> MapPool<'a> {
         R: Send + 'static,
         F: Fn(T) -> R + Send + Sync + 'static,
     {
-        let (tx, rx) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
         let len = inputs.len();
 
         let f = Arc::new(f);
         for (i, input) in inputs.into_iter().enumerate() {
             let f = Arc::clone(&f);
 
-            let tx = tx.clone();
+            let sender = sender.clone();
             let job = Box::new(move || {
                 let result = f(input);
-                tx.send((i, result)).unwrap();
+                sender.send((i, result)).unwrap();
             });
 
             self.pool.submit(job);
         }
 
-        let mut results = Vec::with_capacity(len);
-        unsafe { results.set_len(len) };
+        // TODO: Look into optimising this without an Option, maybe using MaybeUninit
+        let mut results: Vec<Option<R>> = (0..len).map(|_| None).collect();
 
         for _ in 0..len {
-            let (i, result) = rx.recv().unwrap();
+            let (i, result) = receiver.recv().unwrap();
             results[i] = Some(result);
         }
 
-        results.into_iter().map(|r| r.unwrap()).collect()
+        results.into_iter().map(Option::unwrap).collect()
     }
 }
