@@ -22,7 +22,7 @@ pub struct Runtime {
 }
 
 struct Worker {
-    thread: JoinHandle<()>,
+    thread: Option<JoinHandle<()>>,
 }
 
 impl Worker {
@@ -38,7 +38,9 @@ impl Worker {
             }
         });
 
-        Worker { thread }
+        Worker {
+            thread: Some(thread),
+        }
     }
 }
 
@@ -87,12 +89,20 @@ impl Runtime {
 
     /// Shutdown the runtime and wait for all threads to finish.
     pub fn shutdown(self) {
+        drop(self)
+    }
+}
+
+impl Drop for Runtime {
+    fn drop(&mut self) {
         for _ in &self.workers {
             self.send_shutdown();
         }
 
-        for worker in self.workers {
-            worker.thread.join().unwrap();
+        for worker in &mut self.workers {
+            if let Some(thread) = worker.thread.take() {
+                let _ = thread.join();
+            }
         }
     }
 }
