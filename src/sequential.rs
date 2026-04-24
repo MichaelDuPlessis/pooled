@@ -1,16 +1,18 @@
-/// A pool that offers no parallelism, this is the same as just running the passed in function.
-pub struct SeqPool;
+use std::marker::PhantomData;
 
-impl SeqPool {
+/// A pool that offers no parallelism, this is the same as just running the passed in function.
+pub struct SeqPool<'a>(PhantomData<&'a ()>);
+
+impl<'a> SeqPool<'a> {
     /// Creates a new `SequentialPool`.
     pub(crate) fn new() -> Self {
-        Self
+        Self(PhantomData)
     }
 
     /// Submit a job to be executed.
     pub fn submit<F>(&self, f: F)
     where
-        F: FnOnce() + Send + 'static,
+        F: FnOnce(),
     {
         f()
     }

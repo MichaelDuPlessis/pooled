@@ -102,7 +102,7 @@ impl Runtime {
     }
 
     /// Create a `SeqPool` from this runtime.
-    pub fn seq_pool(&self) -> SeqPool {
+    pub fn seq_pool(&self) -> SeqPool<'_> {
         SeqPool::new()
     }
 
