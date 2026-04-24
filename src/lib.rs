@@ -75,7 +75,7 @@ impl Runtime {
     }
 
     fn send(&self, message: Message) {
-        // This is save beacause Runtime controls the recievers which can only be dropped if the runtime is dropped
+        // This is safe because Runtime controls the receivers which can only be dropped if the runtime is dropped
         unsafe { self.sender.send(message).unwrap_unchecked() };
     }
 
