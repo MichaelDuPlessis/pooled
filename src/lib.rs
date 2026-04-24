@@ -6,9 +6,25 @@ use crate::map::MapPool;
 use crate::sequential::SeqPool;
 use crate::simple::SimplePool;
 use lockout::channel::mpmc;
-use std::thread::{self, JoinHandle};
+use std::{
+    any::Any,
+    sync::mpsc::RecvError,
+    thread::{self, JoinHandle},
+};
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
+
+// TODO: Libraries name is probably going to change so this may need to also
+pub enum PoolError {
+    JobPanic(Box<dyn Any + Send>),
+    ChannelClosed,
+}
+
+impl From<RecvError> for PoolError {
+    fn from(_: RecvError) -> Self {
+        Self::ChannelClosed
+    }
+}
 
 enum Message {
     NewJob(Job),
@@ -31,7 +47,9 @@ impl Worker {
             loop {
                 let message = receiver.recv();
                 match message {
-                    Ok(Message::NewJob(job)) => job(),
+                    Ok(Message::NewJob(job)) => {
+                        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
+                    }
                     Ok(Message::Terminate) => break,
                     Err(_) => break,
                 }
