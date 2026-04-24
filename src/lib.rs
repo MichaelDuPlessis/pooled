@@ -5,7 +5,7 @@ pub mod simple;
 use crate::map::MapPool;
 use crate::sequential::SeqPool;
 use crate::simple::SimplePool;
-use std::sync::{Arc, Mutex, mpsc};
+use lockout::channel::mpmc;
 use std::thread::{self, JoinHandle};
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
@@ -18,7 +18,7 @@ enum Message {
 /// The main thread pool used to create other pools.
 pub struct Runtime {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Message>,
+    sender: mpmc::Sender<Message>,
 }
 
 struct Worker {
@@ -26,10 +26,10 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
+    fn new(receiver: mpmc::Receiver<Message>) -> Worker {
         let thread = thread::spawn(move || {
             loop {
-                let message = receiver.lock().unwrap().recv();
+                let message = receiver.recv();
                 match message {
                     Ok(Message::NewJob(job)) => job(),
                     Ok(Message::Terminate) => break,
@@ -45,11 +45,10 @@ impl Worker {
 impl Runtime {
     /// Create a new Runtime with a specified number of threads.
     pub fn new(num_threads: usize) -> Self {
-        let (sender, receiver) = mpsc::channel();
-        let receiver = Arc::new(Mutex::new(receiver));
+        let (sender, receiver) = mpmc::channel();
 
         let workers = (0..num_threads)
-            .map(|_| Worker::new(Arc::clone(&receiver)))
+            .map(|_| Worker::new(receiver.clone()))
             .collect();
 
         Self { workers, sender }
