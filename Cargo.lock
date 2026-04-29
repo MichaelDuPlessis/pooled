@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.60"
+version = "1.2.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43c5703da9466b66a946814e1adf53ea2c90f10063b86290cc9eb67ce3478a20"
+checksum = "d16d90359e986641506914ba71350897565610e87ce0ad9e6f28569db3dd5c6d"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -62,9 +62,9 @@ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
 name = "lockout"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea975d8938d5bd639b8efd6b951140afe382a33c0bd9eaa95ac1a57bbdad8219"
+checksum = "584b2f82d47fea1140731263506ca1d30df3bdd403bdcd010be09e407a15fa7b"
 dependencies = [
  "lockout-channel",
  "lockout-hazard",
@@ -72,9 +72,9 @@ dependencies = [
 
 [[package]]
 name = "lockout-channel"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8517c8b4c52454eb1dee3126b0df1cc71a02ca4631e945d2c8700408aa6b08b3"
+checksum = "684e8493318935aa18114a0d70f6757df366639f17ea8489c4ee786874627d5c"
 dependencies = [
  "lockout-hazard",
 ]

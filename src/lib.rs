@@ -1,10 +1,11 @@
+pub mod future;
 pub mod map;
 pub mod sequential;
 pub mod simple;
 
-use crate::map::MapPool;
 use crate::sequential::SeqPool;
 use crate::simple::SimplePool;
+use crate::{future::FuturePool, map::MapPool};
 use lockout::channel::mpmc;
 use std::{
     any::Any,
@@ -104,6 +105,10 @@ impl Runtime {
     /// Create a `SeqPool` from this runtime.
     pub fn seq_pool(&self) -> SeqPool<'_> {
         SeqPool::new()
+    }
+
+    pub fn future_pool(&self) -> FuturePool<'_> {
+        FuturePool::new(self)
     }
 
     /// Shutdown the runtime and wait for all threads to finish.
