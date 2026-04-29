@@ -21,6 +21,15 @@ pub enum PoolError {
     ChannelClosed,
 }
 
+impl std::fmt::Debug for PoolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::JobPanic(_) => write!(f, "PoolError::JobPanic(..)"),
+            Self::ChannelClosed => write!(f, "PoolError::ChannelClosed"),
+        }
+    }
+}
+
 impl From<RecvError> for PoolError {
     fn from(_: RecvError) -> Self {
         Self::ChannelClosed
