@@ -1,16 +1,41 @@
 # Pooled
 
-Pooled is a threadpool library. It features zero external dependencies so that it can be a light package to install. The concept behind pooled is to allow the user
-to create a parent threadpool which can then be used to create more specialized threadpools.
+A lightweight thread pool library with specialized pool types.
 
-## Types of Threadpools
+## Pool Types
 
-### SimplePool
+- **SimplePool** — fire-and-forget job submission
+- **MapPool** — map a function over inputs in parallel, results returned in order
+- **FuturePool** — submit a job and retrieve the result later via a `Task` handle
+- **SeqPool** — no parallelism, runs jobs synchronously (useful for testing/debugging)
 
-This is a simple threadpool that allows users to submit jobs and that is about it. This is essentially a fire and forget type of thread pool.
+## Usage
 
-### MapPool
+```rust
+use pooled::Runtime;
 
-This threadpool takes a function and a list of inputs and produces a list of results where the function maps the input list to the output list. This is
-similar to rayons par_iter.
+let runtime = Runtime::new(4);
 
+// Fire-and-forget
+let pool = runtime.simple_pool();
+pool.submit(|| println!("hello from the pool"));
+
+// Map over inputs in parallel
+let map = runtime.map_pool();
+let results = map.map(vec![1, 2, 3], |x| x * 2);
+
+// Submit and retrieve a result later
+let future = runtime.future_pool();
+let task = future.submit(|| 42);
+assert_eq!(task.wait().unwrap(), 42);
+
+runtime.shutdown();
+```
+
+## Error Handling
+
+Jobs that panic are caught and returned as `Err(PoolError::JobPanic(..))` in `MapPool` and `FuturePool`. Worker threads stay alive after a panic.
+
+## License
+
+MIT

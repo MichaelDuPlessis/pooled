@@ -2,6 +2,12 @@
 name = "pooled"
 version = "0.1.0"
 edition = "2024"
+authors = ["Michael Du Plessis <mdp0101@gmail.com>"]
+description = "A lightweight thread pool library with specialized pool types"
+license = "MIT"
+repository = "https://github.com/MichaelDuPlessis/pooled"
+keywords = ["threadpool", "concurrency", "parallel", "async"]
+categories = ["concurrency"]
 
 [dependencies]
 lockout = "0.2"
