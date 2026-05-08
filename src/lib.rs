@@ -1,3 +1,28 @@
+//! A lightweight thread pool library with specialized pool types.
+//!
+//! # Example
+//!
+//! ```
+//! use pooled::Runtime;
+//!
+//! let runtime = Runtime::new(4);
+//!
+//! // Fire-and-forget
+//! let pool = runtime.simple_pool();
+//! pool.submit(|| println!("hello from the pool"));
+//!
+//! // Map over inputs in parallel
+//! let map = runtime.map_pool();
+//! let results = map.map(vec![1, 2, 3], |x| x * 2);
+//!
+//! // Submit and retrieve a result later
+//! let future = runtime.future_pool();
+//! let task = future.submit(|| 42);
+//! assert_eq!(task.wait().unwrap(), 42);
+//!
+//! runtime.shutdown();
+//! ```
+
 pub mod future;
 pub mod map;
 pub mod sequential;
@@ -9,26 +34,40 @@ use crate::{future::FuturePool, map::MapPool};
 use lockout::channel::mpmc;
 use std::{
     any::Any,
+    fmt,
     sync::mpsc::RecvError,
     thread::{self, JoinHandle},
 };
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
-// TODO: Libraries name is probably going to change so this may need to also
+/// Errors that can occur when executing jobs on the pool.
 pub enum PoolError {
+    /// A job panicked. Contains the panic payload.
     JobPanic(Box<dyn Any + Send>),
+    /// The channel was closed unexpectedly.
     ChannelClosed,
 }
 
-impl std::fmt::Debug for PoolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for PoolError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::JobPanic(_) => write!(f, "PoolError::JobPanic(..)"),
             Self::ChannelClosed => write!(f, "PoolError::ChannelClosed"),
         }
     }
 }
+
+impl fmt::Display for PoolError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::JobPanic(_) => write!(f, "job panicked"),
+            Self::ChannelClosed => write!(f, "channel closed"),
+        }
+    }
+}
+
+impl std::error::Error for PoolError {}
 
 impl From<RecvError> for PoolError {
     fn from(_: RecvError) -> Self {
@@ -74,7 +113,13 @@ impl Worker {
 
 impl Runtime {
     /// Create a new Runtime with a specified number of threads.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `num_threads` is zero.
     pub fn new(num_threads: usize) -> Self {
+        assert!(num_threads > 0, "thread pool must have at least one thread");
+
         let (sender, receiver) = mpmc::channel();
 
         let workers = (0..num_threads)
@@ -85,7 +130,7 @@ impl Runtime {
     }
 
     fn send(&self, message: Message) {
-        // This is safe because Runtime controls the receivers which can only be dropped if the runtime is dropped
+        // Safety: Runtime controls the receivers which can only be dropped if the runtime is dropped
         unsafe { self.sender.send(message).unwrap_unchecked() };
     }
 
@@ -101,21 +146,22 @@ impl Runtime {
         self.send(Message::Terminate);
     }
 
-    /// Create a `SimplePool` from this runtime.
+    /// Create a [`SimplePool`] from this runtime.
     pub fn simple_pool(&self) -> SimplePool<'_> {
-        SimplePool::new(&self)
+        SimplePool::new(self)
     }
 
-    /// Create a `MapPool` from this runtime.
+    /// Create a [`MapPool`] from this runtime.
     pub fn map_pool(&self) -> MapPool<'_> {
-        MapPool::new(&self)
+        MapPool::new(self)
     }
 
-    /// Create a `SeqPool` from this runtime.
+    /// Create a [`SeqPool`] from this runtime.
     pub fn seq_pool(&self) -> SeqPool<'_> {
         SeqPool::new()
     }
 
+    /// Create a [`FuturePool`] from this runtime.
     pub fn future_pool(&self) -> FuturePool<'_> {
         FuturePool::new(self)
     }

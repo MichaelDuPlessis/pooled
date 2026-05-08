@@ -72,9 +72,9 @@ dependencies = [
 
 [[package]]
 name = "lockout-channel"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "684e8493318935aa18114a0d70f6757df366639f17ea8489c4ee786874627d5c"
+checksum = "1a4874a2f8a9b1b181b6a9614830481925e0afd2adc5a4531ac4ab547bb25385"
 dependencies = [
  "lockout-hazard",
 ]
