@@ -13,7 +13,7 @@
 //!
 //! // Map over inputs in parallel
 //! let map = runtime.map_pool();
-//! let results = map.map(vec![1, 2, 3], |x| x * 2);
+//! let results = map.map(&[1, 2, 3], |x| x * 2);
 //!
 //! // Submit and retrieve a result later
 //! let future = runtime.future_pool();
@@ -75,18 +75,18 @@ impl From<RecvError> for PoolError {
     }
 }
 
-enum Message {
+pub(crate) enum Message {
     NewJob(Job),
     Terminate,
 }
 
 /// The main thread pool used to create other pools.
 pub struct Runtime {
-    workers: Vec<Worker>,
+    pub(crate) workers: Vec<Worker>,
     sender: mpmc::Sender<Message>,
 }
 
-struct Worker {
+pub(crate) struct Worker {
     thread: Option<JoinHandle<()>>,
 }
 
@@ -129,7 +129,7 @@ impl Runtime {
         Self { workers, sender }
     }
 
-    fn send(&self, message: Message) {
+    pub(crate) fn send(&self, message: Message) {
         // Safety: Runtime controls the receivers which can only be dropped if the runtime is dropped
         unsafe { self.sender.send(message).unwrap_unchecked() };
     }
