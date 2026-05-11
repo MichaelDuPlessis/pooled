@@ -167,6 +167,11 @@ impl Runtime {
         self.send(Message::Terminate);
     }
 
+    /// Returns the number of worker threads in the pool.
+    pub fn num_workers(&self) -> usize {
+        self.workers.len()
+    }
+
     /// Create a [`SimplePool`] from this runtime.
     pub fn simple_pool(&self) -> SimplePool<'_> {
         SimplePool::new(self)
