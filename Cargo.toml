@@ -1,6 +1,6 @@
 [package]
 name = "pooled"
-version = "0.3"
+version = "0.3.0"
 edition = "2024"
 authors = ["Michael Du Plessis <mdp0101@gmail.com>"]
 description = "A lightweight thread pool library with specialized pool types"
