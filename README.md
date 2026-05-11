@@ -36,6 +36,10 @@ runtime.shutdown();
 
 Jobs that panic are caught and returned as `Err(PoolError::JobPanic(..))` in `MapPool` and `FuturePool`. Worker threads stay alive after a panic.
 
+## Design Notes
+
+`MapPool::map` uses cooperative work-stealing while waiting for results — the calling thread processes other pending jobs from the shared queue instead of blocking. This prevents deadlocks when all workers are occupied.
+
 ## License
 
 MIT

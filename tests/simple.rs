@@ -1,5 +1,8 @@
 use pooled::Runtime;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
 
 #[test]
 fn submit_executes_job() {
@@ -8,7 +11,9 @@ fn submit_executes_job() {
 
     let counter = Arc::new(AtomicUsize::new(0));
     let c = counter.clone();
-    pool.submit(move || { c.fetch_add(1, Ordering::SeqCst); });
+    pool.submit(move || {
+        c.fetch_add(1, Ordering::SeqCst);
+    });
 
     runtime.shutdown();
     assert_eq!(counter.load(Ordering::SeqCst), 1);
@@ -22,7 +27,9 @@ fn submit_multiple_jobs() {
     let counter = Arc::new(AtomicUsize::new(0));
     for _ in 0..100 {
         let c = counter.clone();
-        pool.submit(move || { c.fetch_add(1, Ordering::SeqCst); });
+        pool.submit(move || {
+            c.fetch_add(1, Ordering::SeqCst);
+        });
     }
 
     runtime.shutdown();
@@ -38,7 +45,9 @@ fn survives_panicking_job() {
 
     let counter = Arc::new(AtomicUsize::new(0));
     let c = counter.clone();
-    pool.submit(move || { c.fetch_add(1, Ordering::SeqCst); });
+    pool.submit(move || {
+        c.fetch_add(1, Ordering::SeqCst);
+    });
 
     runtime.shutdown();
     assert_eq!(counter.load(Ordering::SeqCst), 1);

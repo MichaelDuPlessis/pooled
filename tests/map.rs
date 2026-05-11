@@ -30,7 +30,9 @@ fn map_captures_panics() {
     let pool = runtime.map_pool();
 
     let results = pool.map(&[1, 2, 3], |x| {
-        if *x == 2 { panic!("bad input"); }
+        if *x == 2 {
+            panic!("bad input");
+        }
         x * 10
     });
 

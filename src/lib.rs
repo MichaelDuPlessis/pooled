@@ -84,6 +84,7 @@ pub(crate) enum Message {
 pub struct Runtime {
     pub(crate) workers: Vec<Worker>,
     sender: mpmc::Sender<Message>,
+    receiver: mpmc::Receiver<Message>,
 }
 
 pub(crate) struct Worker {
@@ -126,12 +127,32 @@ impl Runtime {
             .map(|_| Worker::new(receiver.clone()))
             .collect();
 
-        Self { workers, sender }
+        Self {
+            workers,
+            sender,
+            receiver,
+        }
     }
 
     pub(crate) fn send(&self, message: Message) {
         // Safety: Runtime controls the receivers which can only be dropped if the runtime is dropped
         unsafe { self.sender.send(message).unwrap_unchecked() };
+    }
+
+    /// Steal and execute one job from the shared channel.
+    /// Returns true if a job was executed, false otherwise.
+    pub(crate) fn steal(&self) -> bool {
+        match self.receiver.try_recv() {
+            Ok(Message::NewJob(job)) => {
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
+                true
+            }
+            Ok(Message::Terminate) => {
+                self.send(Message::Terminate);
+                false
+            }
+            Err(_) => false,
+        }
     }
 
     fn send_job<F>(&self, job: F)

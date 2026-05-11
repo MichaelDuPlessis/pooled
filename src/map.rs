@@ -52,30 +52,33 @@ impl<'a> MapPool<'a> {
             // Safety: we transmute to 'static. This function blocks below until all
             // jobs finish, guaranteeing all borrowed data outlives the jobs.
             let job: Box<dyn FnOnce() + Send + 'static> = unsafe {
-                std::mem::transmute::<Box<dyn FnOnce() + Send + '_>, Box<dyn FnOnce() + Send + 'static>>(
-                    Box::new(move || {
-                        let out = buf_addr as *mut MaybeUninit<Result<R, PoolError>>;
-                        for j in 0..this_chunk {
-                            let idx = chunk_offset + j;
-                            let result = std::panic::catch_unwind(
-                                std::panic::AssertUnwindSafe(|| f_ref(&inputs_ref[idx])),
-                            );
-                            let val = match result {
-                                Ok(v) => Ok(v),
-                                Err(panic) => Err(PoolError::JobPanic(panic)),
-                            };
-                            out.add(idx).write(MaybeUninit::new(val));
-                        }
-                        remaining_ref.fetch_sub(1, Ordering::Release);
-                    }),
-                )
+                std::mem::transmute::<
+                    Box<dyn FnOnce() + Send + '_>,
+                    Box<dyn FnOnce() + Send + 'static>,
+                >(Box::new(move || {
+                    let out = buf_addr as *mut MaybeUninit<Result<R, PoolError>>;
+                    for j in 0..this_chunk {
+                        let idx = chunk_offset + j;
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            f_ref(&inputs_ref[idx])
+                        }));
+                        let val = match result {
+                            Ok(v) => Ok(v),
+                            Err(panic) => Err(PoolError::JobPanic(panic)),
+                        };
+                        out.add(idx).write(MaybeUninit::new(val));
+                    }
+                    remaining_ref.fetch_sub(1, Ordering::Release);
+                }))
             };
 
             self.runtime.send(Message::NewJob(job));
         }
 
         while remaining.load(Ordering::Acquire) != 0 {
-            std::hint::spin_loop();
+            if !self.runtime.steal() {
+                std::thread::yield_now();
+            }
         }
 
         // Safety: all slots initialized by workers above

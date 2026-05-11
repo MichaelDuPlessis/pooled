@@ -6,7 +6,9 @@ fn submit_runs_synchronously() {
     let pool = runtime.seq_pool();
 
     let mut value = 0;
-    pool.submit(|| { value = 42; });
+    pool.submit(|| {
+        value = 42;
+    });
     assert_eq!(value, 42);
 
     runtime.shutdown();
@@ -19,7 +21,9 @@ fn submit_can_borrow_local_data() {
 
     let data = vec![1, 2, 3];
     let mut sum = 0;
-    pool.submit(|| { sum = data.iter().sum(); });
+    pool.submit(|| {
+        sum = data.iter().sum();
+    });
     assert_eq!(sum, 6);
 
     runtime.shutdown();
